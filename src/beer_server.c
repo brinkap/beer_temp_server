@@ -23,6 +23,9 @@ int beer_server_init(beer_server_t *self,
 
   self->port = atoi(argv[1]);
   self->enable_logging = atoi(argv[2]);
+  self->beer_message.setpoint = 23; // deg c
+  self->beer_message.heater_signal = 0; // start off
+  self->beer_message.cooler_signal = 0; // start off
 
   // Start Socket 
   self->sockfd = make_socket(self->port);
@@ -83,7 +86,7 @@ int beer_server_process(beer_server_t *self){
   struct timespec tm;
   clock_gettime(CLOCK_MONOTONIC, &tm);
   self->beer_message.time = tm.tv_sec + 1.0e-9*tm.tv_nsec;
-  if(self->iter++ %100 == 0)
+  if(self->iter++ %10 == 0)
     PRINT("spinning %d", self->iter);
   // dummy data for now
   self->beer_message.t1 = self->iter;
@@ -139,10 +142,18 @@ void beer_server_listen(beer_server_t *self){
         self->bufsize = read(i, self->buffer, MAX_MSG_SIZE);
         if(self->bufsize < 0){
           // read error
-          perror("read");
+          PRINT("bad read, Closing connection...");
+          if(self->enable_logging){
+            struct timespec tm;
+            clock_gettime(CLOCK_MONOTONIC, &tm);
+            fprintf(self->logfd, "%f: Closing connection fd %d\n", 
+                tm.tv_sec + 1.0e-9*tm.tv_nsec, i);
+          }
+          close(i);
+          FD_CLR(i, &self->active_fd_set);
         }else if(self->bufsize == 0){
           // end-of-file
-          PRINT("Closing connection...");
+          PRINT("EOF read, Closing connection...");
           if(self->enable_logging){
             struct timespec tm;
             clock_gettime(CLOCK_MONOTONIC, &tm);
@@ -183,6 +194,13 @@ void beer_server_listen(beer_server_t *self){
   }
 }
 
+void beer_server_flush_logs(beer_server_t *self){
+  if(self->enable_logging){
+    fflush(self->logfd);
+    fflush(self->datafd);
+  }
+}
+
 void beer_server_handle_new_message(beer_server_t *self, int fd){
   self->buffer[self->bufsize] = '\0';
   PRINT("Got message %s", self->buffer);
@@ -194,6 +212,21 @@ void beer_server_handle_new_message(beer_server_t *self, int fd){
         fd,
         self->buffer);
   }
+  char control_char;
+  double value;
+  int n = sscanf(self->buffer, "%c,%lf", &control_char, &value);
+  if(n == 2){
+    switch(control_char){
+      case 'S':
+        PRINT("Updating setpoint to %f", value);
+        self->beer_message.setpoint = value;
+        break;
+      default:
+        PRINT("Unhandled input message");
+        break;
+    }
+  }
+  
 }
 
 void beer_server_end(beer_server_t *self){

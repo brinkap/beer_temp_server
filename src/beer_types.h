@@ -10,6 +10,9 @@ typedef struct{
   double time;
   double t1;
   double t2;
+  double setpoint;
+  int heater_signal;
+  int cooler_signal;
 } beer_message_t;
 
 #define BEER_MAX_NUM_SERVERS 5

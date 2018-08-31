@@ -30,10 +30,14 @@ int make_socket (uint16_t port) {
 
 int beer_save_data_header(FILE * fd){
   assert(NULL != fd);
-  fprintf(fd, "Time[Epoch, sec], T1[C], T2[C]\n");
+  fprintf(fd, "Time[Epoch_sec], T1[C], T2[C],");
+  fprintf(fd, "setpoint[C], heater_on, cooler_on,");
+  fprintf(fd, "\n");
 }
 
 int beer_save_data_raw(FILE * fd, beer_message_t msg){
   assert(NULL != fd);
-  fprintf(fd, "%f, %f, %f\n", msg.time, msg.t1, msg.t2);
+  fprintf(fd, "%f, %f, %f,", msg.time, msg.t1, msg.t2);
+  fprintf(fd, "%f, %d, %d,", msg.setpoint, msg.heater_signal, msg.cooler_signal);
+  fprintf(fd, "\n");
 }
