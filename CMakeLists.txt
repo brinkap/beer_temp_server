@@ -3,6 +3,17 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 PROJECT(beer)
 SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
 
+
+if(EXISTS "/usr/include/wiringPi.h")
+  message("found wiringPi!")
+  add_definitions(-DHAVE_WIRINGPI=1)
+  set(wiringPi-lib "wiringPi")
+else()
+  message("did not find wiringPi lib")
+  add_definitions(-DHAVE_WIRINGPI=0)
+  set(wiringPi-lib "")
+endif()
+
 add_custom_target(
   make_var_log_dir ALL
   COMMAND sudo mkdir -p /var/log/beer
@@ -12,6 +23,7 @@ add_custom_target(
 
 include_directories(
   src
+  /usr/local
   )
 
 add_library(beer_server-lib
@@ -19,7 +31,7 @@ add_library(beer_server-lib
   src/beer_utils.c
   )
 target_link_libraries(beer_server-lib
-  pthread m
+  pthread m ${wiringPi-lib}
   )
 
 add_executable(run_beer_server

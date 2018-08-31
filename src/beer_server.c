@@ -6,6 +6,9 @@
 #include <arpa/inet.h>
 #include <time.h>
 #include <math.h>
+#if HAVE_WIRINGPI
+  #include "wiringPi.h"
+#endif
 
 #include "beer_server.h"
 #include "beer_utils.h"
@@ -72,6 +75,14 @@ int beer_server_init(beer_server_t *self,
     }
     beer_save_data_header(self->datafd);
 
+    // setup WiringPi
+    #if HAVE_WIRINGPI
+      if(wiringPiSetup()==-1){
+        PRINT("Could not configure wiringPi");
+        return 0;
+      }
+    #endif 
+
     PRINT("Correctly setup logging files");
   }
 
@@ -95,6 +106,12 @@ int beer_server_process(beer_server_t *self){
   if(self->enable_logging){
     beer_save_data_raw(self->datafd, self->beer_message);
   }
+
+  #if HAVE_WIRINGPI
+    digitalWrite(7,self->iter%2);
+  #endif
+  
+
   return 1;
 }
 
@@ -226,7 +243,7 @@ void beer_server_handle_new_message(beer_server_t *self, int fd){
         break;
     }
   }
-  
+
 }
 
 void beer_server_end(beer_server_t *self){
