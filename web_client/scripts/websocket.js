@@ -39,7 +39,7 @@ var connectionHeading = document.querySelector("p[name=connection_status]")
 var myButton = document.querySelector("button[name=connect_button]");
 //webSocket = webSocketFactory.connect("ws://localhost:8000/");
 connectionHeading.textContent = "Connection Status is ATTEMPTING";
-var url = "ws://localhost:8000/";
+var url = "ws://localhost:7681/";
 var webSocket = new WebSocket(url);
 webSocket.onopen = function(ev) {
   console.log('Connection opened.');

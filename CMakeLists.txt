@@ -23,7 +23,8 @@ add_custom_target(
 
 include_directories(
   src
-  /usr/local
+  /usr/local/include
+  /usr/local/include/libwebsockets
   )
 
 add_library(beer_server-lib
@@ -58,4 +59,18 @@ add_executable(ws_handshake_test
 target_link_libraries(ws_handshake_test
   crypto
   )
+find_library(websockets-lib
+  NAMES libwebsockets.a
+  PATHS /usr/local/lib
+  )
+message(status, "Websockets-lib ${websockets-lib}")
 
+add_executable(libwebsockets_simple_server
+  src/libwebsockets_simple_server.c
+  )
+target_link_libraries(libwebsockets_simple_server
+  ${websockets-lib}
+  pthread
+  crypto
+  ssl
+  )
