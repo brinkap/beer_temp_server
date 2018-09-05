@@ -23,6 +23,7 @@ int make_socket (uint16_t port) {
   if (bind (sock, (struct sockaddr *) &name, sizeof (name)) < 0)
   {
     perror ("bind");
+    return -1;
   }
 
   return sock;

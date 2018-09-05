@@ -8,7 +8,7 @@
 #include <math.h>
 #include <openssl/sha.h>
 #if HAVE_WIRINGPI
-  #include "wiringPi.h"
+#include "wiringPi.h"
 #endif
 
 #include "base64.h"
@@ -20,7 +20,7 @@ int beer_server_init(beer_server_t *self,
 
   // Parse inputs
   if(argc != 3){
-    PRINT("Error 3 arguments required");
+    PRINT("Error 2 arguments required");
     PRINT(" <port_no> server port e.g. 8080");
     PRINT(" <enable_logging> saves to /var/log/beer/");
     return 0;
@@ -60,14 +60,7 @@ int beer_server_init(beer_server_t *self,
       PRINT("Could not open log file %s, returning", log_file);
       return 0;
     }
-
-    struct timespec tm;
-    clock_gettime(CLOCK_MONOTONIC, &tm);
-    fprintf(self->logfd, "%f: Beer server started\n",
-        tm.tv_sec + 1.0e-9*tm.tv_nsec);
-    fprintf(self->logfd, "%f: Port no: %d\n", 
-        tm.tv_sec + 1.0e-9*tm.tv_nsec,
-        self->port);
+    beer_server_log(self, "Beer server started on port %d", self->port);
 
     char data_file[255];
     snprintf(data_file, 255, "/var/log/beer/beer_data_%d_%d_%d_%d.csv", 
@@ -80,21 +73,21 @@ int beer_server_init(beer_server_t *self,
     beer_save_data_header(self->datafd);
 
     // setup WiringPi
-    #if HAVE_WIRINGPI
-      if(wiringPiSetup()==-1){
-        PRINT("Could not configure wiringPi");
-        return 0;
-      }
-    #endif 
+#if HAVE_WIRINGPI
+    if(wiringPiSetup()==-1){
+      PRINT("Could not configure wiringPi");
+      return 0;
+    }
+#endif 
 
     PRINT("Correctly setup logging files");
   }
 
   PRINT("Started Server on %d, logging is %d", 
       self->port, self->enable_logging);
+
   self->iter = 0;
   return 1;
-
 }
 
 int beer_server_process(beer_server_t *self){
@@ -110,15 +103,15 @@ int beer_server_process(beer_server_t *self){
   double dt = (self->beer_message.t2 - self->beer_message.setpoint);
 
   self->beer_message.t2 +=  
-      K_FACTOR*(HEATER_TEMP - self->beer_message.t2)*(double)self->beer_message.heater_signal +
-      K_FACTOR*(COOLER_TEMP - self->beer_message.t2)*(double)self->beer_message.cooler_signal + 
-      K_FACTOR*(self->beer_message.setpoint - self->beer_message.t2);
-  
+    K_FACTOR*(HEATER_TEMP - self->beer_message.t2)*(double)self->beer_message.heater_signal +
+    K_FACTOR*(COOLER_TEMP - self->beer_message.t2)*(double)self->beer_message.cooler_signal + 
+    K_FACTOR*(self->beer_message.setpoint - self->beer_message.t2);
+
   self->beer_message.t1 = self->iter;
 
-  #if HAVE_WIRINGPI
-    digitalWrite(7,self->iter%2);
-  #endif
+#if HAVE_WIRINGPI
+  digitalWrite(7,self->iter%2);
+#endif
 
   if(self->enable_logging){
     beer_save_data_raw(self->datafd, self->beer_message);
@@ -150,20 +143,13 @@ void beer_server_listen(beer_server_t *self){
           PRINT("ERROR on accept");
         }
         self->clilen = sizeof(self->cli_addr);
-        PRINT("Server: New Connection from host %s, port %hd, fd %d", 
+        PRINT("New Connection from host %s, port %hd, fd %d", 
             inet_ntoa(self->cli_addr.sin_addr),
-            ntohs(self->cli_addr.sin_port),
-            newsockfd);
-        if(self->enable_logging){
-          struct timespec tm;
-          clock_gettime(CLOCK_MONOTONIC, &tm);
-          fprintf(self->logfd, "%f: New Connection from host %s, port %hd, fd %d\n", 
-              tm.tv_sec + 1.0e-9*tm.tv_nsec,
+            ntohs(self->cli_addr.sin_port), newsockfd);
+        beer_server_log(self, "New Connection from host %s, port %hd, fd %d", 
               inet_ntoa(self->cli_addr.sin_addr),
-              ntohs(self->cli_addr.sin_port),
-              newsockfd);
-          FD_CLR(newsockfd, &self->handshake_complete);
-        }
+              ntohs(self->cli_addr.sin_port), newsockfd);
+        FD_CLR(newsockfd, &self->handshake_complete);
         FD_SET(newsockfd, &self->active_fd_set);
 
       }else{  // Data in on preexisting connection
@@ -172,24 +158,16 @@ void beer_server_listen(beer_server_t *self){
         if(self->bufsize < 0){
           // read error
           PRINT("bad read, Closing connection...");
-          if(self->enable_logging){
-            struct timespec tm;
-            clock_gettime(CLOCK_MONOTONIC, &tm);
-            fprintf(self->logfd, "%f: Closing connection fd %d\n", 
-                tm.tv_sec + 1.0e-9*tm.tv_nsec, i);
-          }
+          beer_server_log(self, "Bad read, Closing connection fd %d", i);
           close(i);
+          FD_CLR(i, &self->handshake_complete);
           FD_CLR(i, &self->active_fd_set);
         }else if(self->bufsize == 0){
           // end-of-file
           PRINT("EOF read, Closing connection...");
-          if(self->enable_logging){
-            struct timespec tm;
-            clock_gettime(CLOCK_MONOTONIC, &tm);
-            fprintf(self->logfd, "%f: Closing connection fd %d\n", 
-                tm.tv_sec + 1.0e-9*tm.tv_nsec, i);
-          }
+          beer_server_log(self, "EOF, Closing connection fd %d", i);
           close(i);
+          FD_CLR(i, &self->handshake_complete);
           FD_CLR(i, &self->active_fd_set);
         }else{
           if(FD_ISSET(i, &self->handshake_complete)){
@@ -205,23 +183,34 @@ void beer_server_listen(beer_server_t *self){
   }
   // Send data to active sockets
   for(i=0; i<FD_SETSIZE; i++){
-    if(FD_ISSET(i, &self->active_fd_set)){
+    if(FD_ISSET(i, &self->active_fd_set) && FD_ISSET(i, &self->handshake_complete)){
       if(i!=self->sockfd){
         int n = write(i,(void*)&self->beer_message,sizeof(beer_message_t));
         if(n < 0){
           PRINT("bad writing to socket, closing connection...");
-          if(self->enable_logging){
-            struct timespec tm;
-            clock_gettime(CLOCK_MONOTONIC, &tm);
-            fprintf(self->logfd, "%f: Closing connection fd %d\n", 
-                tm.tv_sec + 1.0e-9*tm.tv_nsec, i);
-          }
+          beer_server_log(self, "Closing connection fd %d", i);
           close(i);
           FD_CLR(i, &self->active_fd_set);
+          FD_CLR(i, &self->handshake_complete);
         }
       }
     }
   }
+}
+
+void beer_server_log(beer_server_t *self, char *fmt, ...){
+  va_list valist;
+  va_start(valist, fmt);
+  char log_msg[1024];
+  int n = vsnprintf(log_msg, sizeof(log_msg), fmt, valist);
+  if(self->enable_logging){
+    struct timespec tm;
+    clock_gettime(CLOCK_MONOTONIC, &tm);
+    fprintf(self->logfd, "%f: %s\n", 
+        tm.tv_sec + 1.0e-9*tm.tv_nsec,
+        log_msg );
+  }
+  va_end(valist);
 }
 
 void beer_server_flush_logs(beer_server_t *self){
@@ -234,16 +223,10 @@ void beer_server_flush_logs(beer_server_t *self){
 void beer_server_handle_new_websocket(beer_server_t *self, int fd){
   self->buffer[self->bufsize] = '\0';
   PRINT("Got First message %d \n  %s", fd, self->buffer);
-  if(self->enable_logging){
-    struct timespec tm;
-    clock_gettime(CLOCK_MONOTONIC, &tm);
-    fprintf(self->logfd, "%f: First msg from fd %d : %s\n", 
-        tm.tv_sec + 1.0e-9*tm.tv_nsec,
-        fd,
-        self->buffer);
-  }
+
   char *pkey = strstr(self->buffer, "Sec-WebSocket-Key:");
   if(pkey){
+    beer_server_log(self, "First msg from fd, websocket handshake started %d : %s", fd, self->buffer);
     PRINT("This appears to be a Websocket connection");
     char key_identifier[128];
     char key_string[128]; 
@@ -257,10 +240,10 @@ void beer_server_handle_new_websocket(beer_server_t *self, int fd){
     //int len = strlen(candidate);
     memcpy(candidate, start_loc, len);
     candidate[len] = '\0';
-    PRINT(" Candidate is %s, of len %d",candidate, len); 
+    PRINT(" Candidate is %s, of len %d",candidate, (int)len); 
     size_t decoded_len;
     char* decoded_candidate = base64_decode(candidate, len, &decoded_len);
-    PRINT("Decoded candidate is %s, len %d should be 16bytes", decoded_candidate, decoded_len);
+    PRINT("Decoded candidate is %s, len %d should be 16 bytes", decoded_candidate, (int)decoded_len);
     strcat(candidate, "258EAFA5-E914-47DA-95CA-C5AB0DC85B11");
     PRINT("Candidate after append %s", candidate);
     char digest[SHA_DIGEST_LENGTH];
@@ -272,11 +255,12 @@ void beer_server_handle_new_websocket(beer_server_t *self, int fd){
     //base64_encoded[outlen] = '\0'; // likely uneeded
     strcat(msg,base64_encoded);
     strcat(msg, "\r\n");
-    strcat(msg, "Sec-WebSocket-Protocol: /\r\n");
-    strcat(msg, "Sec-WebSocket-Extensions: permessage-deflate\r\n");
+    //strcat(msg, "Sec-WebSocket-Protocol: /\r\n");
+    //strcat(msg, "Sec-WebSocket-Extensions: permessage-deflate\r\n");
     strcat(msg, "\r\n");
-    //int n = write(fd,(void*)msg,strlen(msg));
+    int n = write(fd,(void*)msg,strlen(msg));
     PRINT("Handshaking message \n\n %s ", msg);
+    FD_SET(fd, &self->handshake_complete);
 
   }else{
     PRINT("This is not a WebSocket Connection, consider handshaking done and handle new message");
@@ -289,14 +273,8 @@ void beer_server_handle_new_websocket(beer_server_t *self, int fd){
 void beer_server_handle_new_message(beer_server_t *self, int fd){
   self->buffer[self->bufsize] = '\0';
   PRINT("Got message %s", self->buffer);
-  if(self->enable_logging){
-    struct timespec tm;
-    clock_gettime(CLOCK_MONOTONIC, &tm);
-    fprintf(self->logfd, "%f: Read msg from fd %d : %s\n", 
-        tm.tv_sec + 1.0e-9*tm.tv_nsec,
-        fd,
-        self->buffer);
-  }
+  beer_server_log(self, "Read msg from fd %d : %s", fd, self->buffer);
+  
   char control_char;
   int value;
   int n = sscanf(self->buffer, "%c,%d", &control_char, &value);
@@ -313,7 +291,7 @@ void beer_server_handle_new_message(beer_server_t *self, int fd){
       case 'H':
         if(self->beer_message.manual_override){
           PRINT("heater signal changed to  %d", value);
-        self->beer_message.heater_signal = value;
+          self->beer_message.heater_signal = value;
         }else{
           PRINT("heater signal not changed, set to manual mode (M) first");
         }

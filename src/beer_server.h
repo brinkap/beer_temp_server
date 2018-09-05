@@ -4,6 +4,7 @@
 #include <sys/types.h> 
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <stdarg.h>
 #include "beer_types.h"
 
 #define MAX_MSG_SIZE 4098 
@@ -36,6 +37,7 @@ int beer_server_init(beer_server_t *self,
     int argc, char *argv[]);
 int beer_server_process(beer_server_t *self);
 void beer_server_listen(beer_server_t *self);
+void beer_server_log(beer_server_t *self, char *fmt, ...);
 void beer_server_flush_logs(beer_server_t *self);
 void beer_server_handle_new_websocket(beer_server_t *self, int fd);
 void beer_server_handle_new_message(beer_server_t *self, int fd);
