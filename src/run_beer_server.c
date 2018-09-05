@@ -31,7 +31,7 @@ int main(int argc, char *argv[])
     }
     beer_server_listen(&server);
     beer_server_flush_logs(&server);
-    usleep(1e6);// sleep
+    usleep(5e5);// sleep
   }
 
   PRINT("Cleaning up server now...");

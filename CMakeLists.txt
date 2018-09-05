@@ -29,9 +29,11 @@ include_directories(
 add_library(beer_server-lib
   src/beer_server.c
   src/beer_utils.c
+  src/base64.c
   )
 target_link_libraries(beer_server-lib
   pthread m ${wiringPi-lib}
+  crypto
   )
 
 add_executable(run_beer_server
@@ -48,4 +50,12 @@ target_link_libraries(run_beer_server
 
 add_executable(client_simple_test
   src/client_simple_test.c)
+
+add_executable(ws_handshake_test
+  src/ws_handshake_test.c
+  src/base64.c
+  )
+target_link_libraries(ws_handshake_test
+  crypto
+  )
 

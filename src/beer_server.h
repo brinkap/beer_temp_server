@@ -6,7 +6,7 @@
 #include <netinet/in.h>
 #include "beer_types.h"
 
-#define MAX_MSG_SIZE 1024
+#define MAX_MSG_SIZE 4098 
 
 typedef struct{
   // inputs
@@ -27,6 +27,7 @@ typedef struct{
 
   fd_set active_fd_set;
   fd_set read_fd_set;
+  fd_set handshake_complete;
 
 } beer_server_t;
 
@@ -36,6 +37,7 @@ int beer_server_init(beer_server_t *self,
 int beer_server_process(beer_server_t *self);
 void beer_server_listen(beer_server_t *self);
 void beer_server_flush_logs(beer_server_t *self);
+void beer_server_handle_new_websocket(beer_server_t *self, int fd);
 void beer_server_handle_new_message(beer_server_t *self, int fd);
 void beer_server_end(beer_server_t *self);
 
