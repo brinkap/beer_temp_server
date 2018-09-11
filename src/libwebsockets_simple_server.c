@@ -19,13 +19,22 @@
 #include <signal.h>
 
 #define LWS_PLUGIN_STATIC
-#include "protocol_lws_minimal.c"
+/*#include "protocol_lws_minimal.c"
 
 static struct lws_protocols protocols[] = {
 	{ "http", lws_callback_http_dummy, 0, 0 },
 	LWS_PLUGIN_PROTOCOL_MINIMAL,
-	{ NULL, NULL, 0, 0 } /* terminator */
+	{ NULL, NULL, 0, 0 } 
 };
+*/
+#include "protocol_dumb_increment.c"
+
+static struct lws_protocols protocols[] = {
+	{ "http",callback_dumb_increment, 0, 0 },
+	LWS_PLUGIN_PROTOCOL_DUMB_INCREMENT,
+	{ NULL, NULL, 0, 0 } 
+};
+
 
 static int interrupted;
 
@@ -94,8 +103,14 @@ int main(int argc, const char **argv)
 		return 1;
 	}
 
-	while (n >= 0 && !interrupted)
-		n = lws_service(context, 1000);
+  //size_t len = 64;
+  //char buffer[LWS_PRE+len];
+  //int loops = 0;
+	while (n >= 0 && !interrupted){
+    //sprintf(&buffer[LWS_PRE], "%d loops", loops++);
+    //lws_write(context, &buffer[LWS_PRE], len, LWS_WRITE_TEXT);
+		n = lws_service(context, 50);
+  }
 
 	lws_context_destroy(context);
 

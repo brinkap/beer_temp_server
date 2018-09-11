@@ -2,6 +2,7 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 
 PROJECT(beer)
 SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
+SET(CMAKE_BUILD_TYPE Debug)
 
 
 if(EXISTS "/usr/include/wiringPi.h")
@@ -74,3 +75,14 @@ target_link_libraries(libwebsockets_simple_server
   crypto
   ssl
   )
+
+add_executable(simple_server
+  src/simple_server.c
+  )
+target_link_libraries(simple_server
+  ${websockets-lib}
+  pthread
+  crypto
+  ssl
+  )
+
