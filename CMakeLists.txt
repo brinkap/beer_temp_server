@@ -2,6 +2,7 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 
 PROJECT(beer)
 SET(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
+LIST(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
 
 if(EXISTS "/usr/include/wiringPi.h")
@@ -65,3 +66,29 @@ target_link_libraries(run_beer_server
 
 add_executable(client_simple_test
   src/client_simple_test.c)
+
+find_package(Check)
+if(CHECK_FOUND)
+  message(STATUS "Check library found.  Run all tests by  issuing `make test`")
+  include(CheckCSourceCompiles)
+  include(CheckCSourceRuns)
+  include(CheckFunctionExists)
+  include(CheckIncludeFile)
+  include(CheckIncludeFiles)
+  include(CheckLibraryExists)
+  include(CheckSymbolExists)
+  include(CheckTypeSize)
+
+  include_directories(${CHECK_INCLUDE_DIRS})
+  link_directories(${CHECK_LIBRARY_DIRS})
+
+  add_subdirectory(test)
+
+  enable_testing()
+  add_test(NAME check_dummy COMMAND check_dummy)
+
+else()
+
+  message(STATUS "WARNING. Check library not found. Test suite will not be  built.")
+
+endif()
