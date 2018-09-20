@@ -19,8 +19,10 @@ typedef struct{
 #define BEER_MAX_NUM_SERVERS 5
 
 #define HEATER_TEMP 40
-#define COOLER_TEMP 5
-#define K_FACTOR 0.05
+#define COOLER_TEMP 10
+#define K_FACTOR 0.01
+#define HOT_DEADBAND 2
+#define COLD_DEADBAND 3
 
 
 

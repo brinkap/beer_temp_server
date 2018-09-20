@@ -30,8 +30,8 @@ int main(int argc, char *argv[])
       break;
     }
     beer_server_listen(&server);
-    beer_server_flush_logs(&server);
-    usleep(5e5);// sleep
+    //beer_server_flush_logs(&server);
+    usleep(1e6);// sleep
   }
 
   PRINT("Cleaning up server now...");
