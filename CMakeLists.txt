@@ -14,12 +14,17 @@ else()
   set(wiringPi-lib "")
 endif()
 
-(NOT EXISTS "/var/log/beer")
+if(NOT EXISTS "/var/log/beer")
   add_custom_target(
     make_var_log_dir ALL
     COMMAND sudo mkdir -p /var/log/beer
     COMMAND sudo chmod a+rw /var/log/beer
     COMMENT "making /var/log/beer directory"
+    )
+else()
+  add_custom_target(
+    make_var_log_dir ALL
+    COMMENT "/var/log/beer directory exists"
     )
 endif()
 
